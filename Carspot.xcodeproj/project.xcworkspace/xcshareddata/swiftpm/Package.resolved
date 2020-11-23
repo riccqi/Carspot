@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "FloatingPanel",
+        "repositoryURL": "https://github.com/SCENEE/FloatingPanel",
+        "state": {
+          "branch": null,
+          "revision": "e4548b26bd28a271f8aa52e04f64bb2401d5e5a7",
+          "version": "1.7.5"
+        }
+      },
+      {
+        "package": "SwiftCSV",
+        "repositoryURL": "https://github.com/swiftcsv/SwiftCSV",
+        "state": {
+          "branch": null,
+          "revision": "8ae14758a2019fd55dc6f9b6ecbbe246bcef179f",
+          "version": "0.5.6"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
