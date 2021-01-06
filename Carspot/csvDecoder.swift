@@ -10,19 +10,11 @@ import Foundation
 import SQLite3
 import SwiftCSV
 
-
-
 class CPManager {
-
-    
     var database: OpaquePointer?
     var csv: CSV?
     
-    
     static let shared = CPManager()
-    
-    private init() {
-    }
 
     func createDatabase() {
         do {
@@ -32,19 +24,17 @@ class CPManager {
                 extension: "csv",
                 bundle: .main,
                 encoding: .utf8)
-
         } catch {
-            print("wtf")
+            print("Failed to find file in bundle.")
             return
         }
     }
-    
     
     func connect() {
         if database != nil {
             return
         }
-        
+        sqlite3_shutdown();
         let databaseURL = try! FileManager.default.url(
             for: .documentDirectory,
             in: .userDomainMask,
@@ -52,9 +42,11 @@ class CPManager {
             create: false
         ).appendingPathComponent("carparks.sqlite")
         
-        if sqlite3_open(databaseURL.path, &database) != SQLITE_OK {
-            print("Error opening database")
-            return
+        if sqlite3_open_v2(databaseURL.path, &database, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK {
+            print("Successfully opened database connection at \(databaseURL.path)")
+        }
+        else {
+            print("unable to open database connection")
         }
         
         if sqlite3_exec(
@@ -132,10 +124,9 @@ class CPManager {
         
         if sqlite3_prepare_v2(database, "SELECT car_park_no, address, x_coord, y_coord, car_park_type, type_of_parking_system, short_term_parking, free_parking, night_parking, total_lots, lot_type_c, lot_type_l, lot_type_h, lot_type_y FROM carparks WHERE car_park_no = ?", -1, &statement, nil) == SQLITE_OK {
             sqlite3_bind_text(statement, 1, NSString(string: cname).utf8String, -1, nil)
-            //print(cname)
-            
+
             while sqlite3_step(statement) == SQLITE_ROW {
-                //print("hi")
+
                 result = Specs(car_park_no: String(cString: sqlite3_column_text(statement, 0)), address: String(cString: sqlite3_column_text(statement, 1)), x_coord: String(cString: sqlite3_column_text(statement, 2)), y_coord: String(cString: sqlite3_column_text(statement, 3)), car_park_type: String(cString: sqlite3_column_text(statement, 4)), type_of_parking_system: String(cString: sqlite3_column_text(statement, 5)), short_term_parking: String(cString: sqlite3_column_text(statement, 6)), free_parking: String(cString: sqlite3_column_text(statement, 7)), night_parking: String(cString: sqlite3_column_text(statement, 8)), total_lots: Int(sqlite3_column_int(statement, 9)), lot_type_c: Int(sqlite3_column_int(statement, 10)), lot_type_l: Int(sqlite3_column_int(statement, 11)), lot_type_h: Int(sqlite3_column_int(statement, 12)), lot_type_y: Int(sqlite3_column_int(statement, 13)))
             }
         }
@@ -156,14 +147,12 @@ class CPManager {
         if sqlite3_prepare_v2(database, "SELECT car_park_no, address, x_coord, y_coord, car_park_type, type_of_parking_system, short_term_parking, free_parking, night_parking, total_lots, lot_type_c, lot_type_l, lot_type_h, lot_type_y FROM carparks", -1, &statement, nil) == SQLITE_OK {
             
             while sqlite3_step(statement) == SQLITE_ROW {
-                //print("hi")
                 result.append(Specs(car_park_no: String(cString: sqlite3_column_text(statement, 0)), address: String(cString: sqlite3_column_text(statement, 1)), x_coord: String(cString: sqlite3_column_text(statement, 2)), y_coord: String(cString: sqlite3_column_text(statement, 3)), car_park_type: String(cString: sqlite3_column_text(statement, 4)), type_of_parking_system: String(cString: sqlite3_column_text(statement, 5)), short_term_parking: String(cString: sqlite3_column_text(statement, 6)), free_parking: String(cString: sqlite3_column_text(statement, 7)), night_parking: String(cString: sqlite3_column_text(statement, 8)), total_lots: Int(sqlite3_column_int(statement, 9)), lot_type_c: Int(sqlite3_column_int(statement, 10)), lot_type_l: Int(sqlite3_column_int(statement, 11)), lot_type_h: Int(sqlite3_column_int(statement, 12)), lot_type_y: Int(sqlite3_column_int(statement, 13))))
             }
         }
         else {
             print("ERROR SELECTING: \(String(cString: sqlite3_errmsg(database)!))")
         }
-        
         sqlite3_finalize(statement)
         return result
     }
@@ -182,7 +171,6 @@ class CPManager {
             
             for i in dets
             {
-                
                 if i.lot_type == "C"
                 {
                     sqlite3_bind_int(statement, 1, Int32(i.total_lots)!)
@@ -204,11 +192,11 @@ class CPManager {
             
             sqlite3_bind_text(statement, 6, NSString(string: carpark).utf8String, -1, nil)
             if sqlite3_step(statement) != SQLITE_DONE {
-                print("Error saving note")
+                print("Error saving update")
             }
         }
         else {
-            print("Error creating note update statement")
+            print("Error creating carpark update statement")
         }
 
         sqlite3_finalize(statement)
@@ -221,11 +209,11 @@ class CPManager {
         if sqlite3_prepare_v2(database, "DELETE FROM carparks WHERE car_park_no = ?", -1, &statement, nil) == SQLITE_OK {
             sqlite3_bind_text(statement, 1, NSString(string: x.carpark_number).utf8String, -1, nil)
             if sqlite3_step(statement) != SQLITE_DONE {
-                print("Error deleting note")
+                print("Error deleting")
             }
         }
         else {
-            print("Error creating note delete statement")
+            print("Error creating carpark delete statement")
         }
         sqlite3_finalize(statement)
     }

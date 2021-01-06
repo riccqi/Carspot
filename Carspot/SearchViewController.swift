@@ -11,7 +11,6 @@ import MapKit
 
 class SearchViewController: UITableViewController {
     
-    //var matchingItems : [MKMapItem] = []
     var mapView : MKMapView!
     let regionInMeters: Double = 1000
     var handleMapSearchDelegate: HandleMapSearch!
@@ -46,16 +45,13 @@ class SearchViewController: UITableViewController {
         dismiss(animated: true, completion: nil)
     }
     
-    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell")!
         let selectedItem = searchResults[indexPath.row]
         cell.textLabel?.text = selectedItem.title
         cell.detailTextLabel?.text = selectedItem.subtitle
-        //cell.detailTextLabel?.text = parseAddress(selectedItem: selectedItem)
         return cell
     }
-
 }
 
 extension SearchViewController: UISearchResultsUpdating {
@@ -69,34 +65,6 @@ extension SearchViewController: UISearchResultsUpdating {
     }
 }
         
-//        let activeSearch = MKLocalSearch(request: searchRequest)
-//        //getting 2 possible variables, response and error
-//        activeSearch.start { (response, error) in
-//            guard let response = response else {return}
-
-            //remove annotations
-//            let annotations = self.mapView.annotations
-//            for i in annotations {
-//                self.mapView.removeAnnotation(i)
-//            }
-//                let latitude = response?.boundingRegion.center.latitude
-//                let longitude = response?.boundingRegion.center.longitude
-//
-//                let annotation = MKPointAnnotation()
-//                //annotation.title = searchBar.text
-//                annotation.coordinate = CLLocationCoordinate2DMake(latitude!, longitude!)
-//                self.mapView.addAnnotation(annotation)
-//
-//                let coordinate: CLLocationCoordinate2D = CLLocationCoordinate2DMake(latitude!, longitude!)
-//                let region = MKCoordinateRegion.init(center: coordinate, latitudinalMeters: self.regionInMeters, longitudinalMeters: self.regionInMeters)
-//                self.mapView.setRegion(region, animated: true)
-            
-//            self.matchingItems = response.mapItems
-//            self.tableView.reloadData()
-//            }
-//        }
-//}
-
 extension SearchViewController: MKLocalSearchCompleterDelegate {
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         searchResults = completer.results
@@ -106,7 +74,7 @@ extension SearchViewController: MKLocalSearchCompleterDelegate {
     }
 
     func completer(_ completer: MKLocalSearchCompleter,didFailWithError error: Error) {
-        print("hey bro u fuked up")
+        print("Search failed.")
     }
 }
 

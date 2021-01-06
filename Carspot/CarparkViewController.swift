@@ -13,7 +13,6 @@ import FloatingPanel
 
 class CarparkViewController: UIViewController, FloatingPanelControllerDelegate {
     
-
     @IBOutlet var CPname: UILabel!
     @IBOutlet weak var feesCP: UILabel!
     @IBOutlet weak var typeOfCP: UILabel!
@@ -21,14 +20,11 @@ class CarparkViewController: UIViewController, FloatingPanelControllerDelegate {
     @IBOutlet weak var nightParking: UILabel!
     @IBOutlet weak var gantryHeight: UILabel!
     @IBOutlet weak var lotsAvail: UILabel!
-    
     @IBOutlet var button: UIButton!
-    
     @IBAction func goButtonTapped(_ sender: UIButton) {
         ViewController.secondFpc.hide(animated: true, completion: nil)
         ViewController.fpc.move(to: .tip, animated: true)
         NotificationCenter.default.post(name: Notification.Name("mapped"), object: nil)
-//        print("u pressed me!")
     }
     
     var carparkInfo2: Specs!
@@ -37,17 +33,6 @@ class CarparkViewController: UIViewController, FloatingPanelControllerDelegate {
     let regionInMeters: Double = 200
     var lat: Double!
     var lon: Double!
-    
-    
-
-    
-//    func centerViewOnUserLocation() {
-//        if let location = locationManager.location?.coordinate {
-//            let region = MKCoordinateRegion.init(center: location, latitudinalMeters: regionInMeters, longitudinalMeters: regionInMeters)
-//            mapView.setRegion(region, animated: true)
-//        }
-//    }
-    
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -56,7 +41,6 @@ class CarparkViewController: UIViewController, FloatingPanelControllerDelegate {
         button.layer.cornerRadius = 15.0
         button.tintColor = UIColor.white
 
-        //checkLocationServices()
         carparkInfo2 = CPManager.shared.getCarpark(cname: carpark!)
         CPname.text = carparkInfo2.address
 
@@ -67,23 +51,12 @@ class CarparkViewController: UIViewController, FloatingPanelControllerDelegate {
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "y_coord"), object: nil, userInfo: y)
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "x_coord"), object: nil, userInfo: x)
 
-        
         feesCP.text = carparkInfo2.short_term_parking
         typeOfCP.text = carparkInfo2.car_park_type + " " + carparkInfo2.type_of_parking_system
         parkingFees.text = carparkInfo2.free_parking
         nightParking.text = carparkInfo2.night_parking
         gantryHeight.text = String(carparkInfo2.total_lots)
         lotsAvail.text = String(carparkInfo2.lot_type_c)
-        
-//        let annotation = MKPointAnnotation()
-//
-//        annotation.coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-//        annotation.title = carpark
-//        //mapView.addAnnotation(annotation)
-//        
-//
-//        let region = MKCoordinateRegion(center: annotation.coordinate, latitudinalMeters: 500, longitudinalMeters: 500)
-//        mapView.setRegion(region, animated: true)
     }
 }
 

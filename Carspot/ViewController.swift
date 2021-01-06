@@ -19,12 +19,13 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
     @IBAction func locationCenter(_ sender: UIButton) {
         let location = self.locationManager.location?.coordinate
         self.mapView.setRegion(MKCoordinateRegion.init(center: location!, latitudinalMeters: self.regionInMeters, longitudinalMeters: self.regionInMeters), animated: true)
+        let placemark = MKPlacemark.init(coordinate: location!)
+        checkNearby(placemark: placemark)
     }
     
     var selectedPin : MKPlacemark!
     static var fpc: FloatingPanelController!
     var directionsArray: [MKDirections] = []
-
     
     let defaults = UserDefaults.standard
     var csv: CSV?
@@ -32,18 +33,16 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
     let locationManager = CLLocationManager()
     let regionInMeters: Double = 1800
     var carparks: [Info] = []
-    //let cellReuseIdentifier = "CarCell"
+
     var spec: Specs!
     var nameAvail: [String] = []
     var specList = CPManager.shared.getFullCarpark()
     var x: Double?
     var y: Double?
-    //var nearbyList: [String] = []
     
     
     var searchCompleter = MKLocalSearchCompleter()
     var searchResults = [MKLocalSearchCompletion]()
-    
     
     var resultSearchController: UISearchController? = nil
     
@@ -54,19 +53,16 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
     }
     
     @objc func showSpinningWheel1(_ notification: NSNotification) {
-//          print(notification.userInfo ?? "")
           if let dict = notification.userInfo as NSDictionary? {
               x = dict["x"] as? Double
           }
    }
     
     @objc func showSpinningWheel2(_ notification: NSNotification) {
-//           print(notification.userInfo ?? "")
            if let dict = notification.userInfo as NSDictionary? {
                y = dict["y"] as? Double
            }
     }
-
 
     func createDirectionsRequest(from coordinate: CLLocationCoordinate2D) -> MKDirections.Request {
         let destinationCoordinate = CLLocationCoordinate2D(latitude: y!, longitude: x!)
@@ -90,8 +86,7 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
     
     @objc func getDirections() {
         guard let location = locationManager.location?.coordinate else {
-            //TODO alert we do not have their location
-            print("error 1")
+            print("Location not acquired.")
             return
         }
         
@@ -100,15 +95,15 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
         resetMapView(withNew: directions)
         
         directions.calculate { [unowned self] (response, error) in
-            //TODO HANDLE ERROR
-            guard let response = response else {return} //TODO alert
+
+            guard let response = response else {return}
             
             //because response is an array of routes due to alternate routes
             for route in response.routes {
-//                let steps = route.steps
+                
+//              let steps = route.steps, for future plans to add route directions
                 self.mapView.addOverlay(route.polyline)
                 var regionRect = route.polyline.boundingMapRect
-
 
                 let wPadding = regionRect.size.width * 0.25
                 let hPadding = regionRect.size.height * 0.25
@@ -126,70 +121,29 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
                 Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { (nil) in
                     self.mapView.setRegion(MKCoordinateRegion.init(center: location!, latitudinalMeters: 500, longitudinalMeters: 500), animated: true)
                 }
-                
-                //self.mapView.setVisibleMapRect(route.polyline.boundingMapRect, animated: true)
             }
-            
         }
-        
     }
 
-
     func floatingPanel(_ vc: FloatingPanelController, layoutFor newCollection: UITraitCollection) -> FloatingPanelLayout? {
-
         return MyFloatingPanelLayout()
     }
     
+    //VIEWDIDLOAD
     override func viewDidLoad() {
         super.viewDidLoad()
         mapView.delegate = self
-        
-        //searchCompleter.delegate = self
-        checkLocationServices()
 
-        let locationSearchTable = storyboard!.instantiateViewController(identifier: "SearchViewController") as SearchViewController
-        resultSearchController = UISearchController(searchResultsController: locationSearchTable)
-        resultSearchController?.searchResultsUpdater = locationSearchTable
-        
-        //passes something to searchviewcontroller
-        locationSearchTable.mapView = mapView
-        locationSearchTable.handleMapSearchDelegate = self
-        
-        
-        let searchBar = resultSearchController?.searchBar
-        searchBar!.sizeToFit()
-        searchBar!.placeholder = "Search for location"
-        navigationItem.titleView = resultSearchController?.searchBar
-        
-        resultSearchController?.hidesNavigationBarDuringPresentation = false
-        definesPresentationContext = true
-
-        ViewController.fpc = FloatingPanelController()
-
-        // Assign self as the delegate of the controller.
-        //fpc.delegate = self // Optional
-
-        // Set a content view controller.
-        guard let contentVC = storyboard?.instantiateViewController(identifier: "fpc_content") as? ModalViewController else {return}
-        ViewController.fpc.set(contentViewController: contentVC)
-
-        // Track a scroll view(or the siblings) in the content view controller.
-        ViewController.fpc.track(scrollView: contentVC.myTableView)
-
-        // Add and show the views managed by the `FloatingPanelController` object to self.view.
-        ViewController.fpc.addPanel(toParent: self)
-        
-        
-
+        //Loading the SQL Database
         let createdSql = defaults.bool(forKey: "createdsql")
         
         if createdSql == false {
             CPManager.shared.createDatabase()
             _ = CPManager.shared.createContent()
-            defaults.set(true, forKey: "createdsql")
+            specList = CPManager.shared.getFullCarpark()
+            self.defaults.set(true, forKey: "createdsql")
         }
         
-
         do {
             // From a file inside the app bundle, with a custom delimiter, errors, and custom encoding
             csv = try CSV(
@@ -199,20 +153,19 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
                 encoding: .utf8)
             
         } catch {
-            print("wtf")
+            print("Unable to find file in bundle")
             return
         }
-
         
+        //Getting data from the GovTech API
         guard let url = URL(string: "https://api.data.gov.sg/v1/transport/carpark-availability") else {
             return
         }
         
-        URLSession.shared.dataTask(with: url) { (data, response, error) in
+        URLSession.shared.dataTask(with: url) {(data, response, error) in
             guard let data = data else {
                 return
             }
-            
             do {
                 let entries = try JSONDecoder().decode(Items.self, from: data)
                 for i in entries.items
@@ -224,42 +177,59 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
                 {
                     if (self.csv?.namedColumns["car_park_no"]!.contains(carpark.carpark_number))!
                     {
-                    
                         CPManager.shared.updateLots(carpark: carpark.carpark_number, dets: carpark.carpark_info)
                         self.nameAvail.append(carpark.carpark_number)
-                        //print("appended \(carpark.carpark_number)")
                     }
                     else {
-                        //print(carpark.carpark_number)
-                        if createdSql == false {
-                            CPManager.shared.filterCarpark(x: carpark)
-                        }
+                        CPManager.shared.filterCarpark(x: carpark)
                     }
                 }
-            
             }
             catch let error {
-                print(error)
+                print(error.localizedDescription)
             }
-            
         }.resume()
         
-        //tableView.delegate = self
-        //tableView.dataSource = self
+        
+        let locationSearchTable = storyboard!.instantiateViewController(identifier: "SearchViewController") as SearchViewController
+        resultSearchController = UISearchController(searchResultsController: locationSearchTable)
+        resultSearchController?.searchResultsUpdater = locationSearchTable
+        
+        //passes something to searchviewcontroller
+        locationSearchTable.mapView = mapView
+        locationSearchTable.handleMapSearchDelegate = self
+        
+        let searchBar = resultSearchController?.searchBar
+        searchBar!.sizeToFit()
+        searchBar!.placeholder = "Search for location"
+        navigationItem.titleView = resultSearchController?.searchBar
+        
+        resultSearchController?.hidesNavigationBarDuringPresentation = false
+        definesPresentationContext = true
+
+        ViewController.fpc = FloatingPanelController()
+
+        // Set a content view controller.
+        guard let contentVC = storyboard?.instantiateViewController(identifier: "fpc_content") as? ModalViewController else {return}
+        ViewController.fpc.set(contentViewController: contentVC)
+
+        // Track a scroll view(or the siblings) in the content view controller.
+        ViewController.fpc.track(scrollView: contentVC.myTableView)
+
+        // Add and show the views managed by the `FloatingPanelController` object to self.view.
+        ViewController.fpc.addPanel(toParent: self)
+        checkLocationServices()
     }
     
     
     //MAP STUFF FROM HERE ON
-    func centerViewOnUserLocation() {
-        if let location = locationManager.location?.coordinate {
-            var mapCentre = location
-            mapCentre.latitude = mapCentre.latitude - 0.006
-            //mapCentre.longitude = mapCentre.longitud
-            let region = MKCoordinateRegion.init(center: mapCentre, latitudinalMeters: regionInMeters, longitudinalMeters: regionInMeters)
-            print(location)
-            let placemark = MKPlacemark.init(coordinate: location)
-            checkNearby(placemark: placemark)
-            mapView.setRegion(region, animated: true)
+    func checkLocationServices() {
+        if CLLocationManager.locationServicesEnabled() {
+            setupLocationManager()
+            checkLocationAuthorization()
+        }
+        else {
+            print("Please turn on your location permissions")
         }
     }
     
@@ -268,23 +238,11 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
     
-    
-    func checkLocationServices() {
-        if CLLocationManager.locationServicesEnabled() {
-            setupLocationManager()
-            checkLocationAuthorization()
-        }
-        else {
-            //alert user to turn on
-        }
-    }
-    
     func checkLocationAuthorization() {
         switch CLLocationManager.authorizationStatus() {
         case .authorizedWhenInUse:
             mapView.showsUserLocation = true //can be done in storyboard too
             centerViewOnUserLocation()
-            //locationManager.startUpdatingLocation() //using delegate method from below
             break
         case .denied:
             //show alert to turn on permission
@@ -292,23 +250,29 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
         case .notDetermined:
             locationManager.requestWhenInUseAuthorization()
         case .restricted:
-            //show alert to turn on permission
             break
         case .authorizedAlways:
             break
         @unknown default:
-            //show alert to turn on permission
             break
         }
     }
     
+    func centerViewOnUserLocation() {
+        if let location = locationManager.location?.coordinate {
+            var mapCentre = location
+            mapCentre.latitude = mapCentre.latitude - 0.006
+            let region = MKCoordinateRegion.init(center: mapCentre, latitudinalMeters: regionInMeters, longitudinalMeters: regionInMeters)
+            print(location)
+            let placemark = MKPlacemark.init(coordinate: location)
+            checkNearby(placemark: placemark)
+            mapView.setRegion(region, animated: true)
+        }
+    }
     
     static var secondFpc: FloatingPanelController!
     
-    
     override func show(_ vc: UIViewController, sender: Any?) {
-
-        
         ViewController.secondFpc = FloatingPanelController()
         ViewController.secondFpc.delegate = self
         ViewController.secondFpc.isRemovalInteractionEnabled = true
@@ -317,22 +281,13 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
         ViewController.secondFpc.surfaceView.contentInsets = .init(top: -25, left: 0, bottom: 15, right: 0)
         ViewController.secondFpc.surfaceView.containerMargins = .init(top: 20.0, left: 8.0, bottom: 20.0, right: 8.0)
         ViewController.secondFpc.surfaceView.cornerRadius = 26.0
-        //secondFpc.surfaceView.borderWidth = 1.0 / traitCollection.displayScale
-        //secondFpc.surfaceView.borderColor = UIColor.black.withAlphaComponent(0.2)
-    
         ViewController.secondFpc.addPanel(toParent: self, animated: true)
-        
-        
     }
     
-    
-    
     func checkNearby(placemark: MKPlacemark) {
-        //TODO FOR NEARBY PINS
         let nearby = CLCircularRegion(center: placemark.coordinate, radius: 600, identifier: "Nearby")
         nearbyList.nearbyList.removeAll()
         for speck in specList {
-            //print("check")
             let lon = Double(speck.x_coord)!
             let lat = Double(speck.y_coord)!
             let coordinate = CLLocationCoordinate2DMake(lat, lon)
@@ -346,14 +301,10 @@ class ViewController: UIViewController, UISearchBarDelegate, FloatingPanelContro
             }
         }
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "newDataNotif"), object: nil)
-        //handleDataTransferDelegate?.HandDataOver(list: nearbyList)
-        //print(nearbyList)
-        
     }
-
 }
 
-//extension of viewcontroller to contain all the delegates
+//Extension of viewcontroller to contain all the delegates
 extension ViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else {return}
@@ -366,7 +317,6 @@ extension ViewController: CLLocationManagerDelegate {
         checkLocationAuthorization()
     }
 }
-
 
 protocol HandleMapSearch {
     func dropPinZoomIn(placemark: MKPlacemark)
@@ -420,7 +370,6 @@ extension ViewController: MKMapViewDelegate {
         
         return renderer
     }
-
 }
 
 class MyFloatingPanelLayout: FloatingPanelLayout {
@@ -435,8 +384,7 @@ class MyFloatingPanelLayout: FloatingPanelLayout {
     public func insetFor(position: FloatingPanelPosition) -> CGFloat? {
         switch position {
             // A top inset from safe area
-            case .full: return 400.0
-            case .half: return 500.0 // A bottom inset from the safe area
+            case .full: return 300.0
             case .tip: return 180.0 // A bottom inset from the safe area
             default: return nil // Or `case .hidden: return nil`
         }

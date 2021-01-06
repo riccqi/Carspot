@@ -78,12 +78,12 @@
 				11FAB0D224B3425000E0489E /* CarparkViewController.swift */,
 				119C8F7024C9815D0095FD6E /* SearchViewController.swift */,
 				119C8F7B24D06AFE0095FD6E /* ModalViewController.swift */,
+				11FAB0D424B5A0AA00E0489E /* csvDecoder.swift */,
+				11FAB0D024B3154400E0489E /* Avaliability.swift */,
 				11FAB0C224B3050A00E0489E /* Main.storyboard */,
 				11FAB0C524B3051400E0489E /* Assets.xcassets */,
 				11FAB0C724B3051400E0489E /* LaunchScreen.storyboard */,
 				11FAB0CA24B3051400E0489E /* Info.plist */,
-				11FAB0D024B3154400E0489E /* Avaliability.swift */,
-				11FAB0D424B5A0AA00E0489E /* csvDecoder.swift */,
 				11A6D55624B6273F007F9084 /* hdb-carpark-information.csv */,
 			);
 			path = Carspot;
